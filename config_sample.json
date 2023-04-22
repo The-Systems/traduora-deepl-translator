@@ -1,0 +1,20 @@
+{
+  "traduora": {
+    "url": "",
+    "username": "",
+    "password": "",
+    "projects": {
+      "ID": "Name"
+    }
+  },
+  "langs": {
+    "fr_FR": "fr", "es_ES": "es", "it_IT": "it", "ja_JP": "ja", "zh_Hans_CN": "zh", "pt_PT": "pt", "sv_SE": "sv", "hu_HU": "hu"
+  },
+  "sourceLang": {
+    "deepl": "en",
+    "traduora": "en_US"
+  },
+  "deepl": {
+    "apiKey": ""
+  }
+} 
