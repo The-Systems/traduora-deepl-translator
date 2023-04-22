@@ -15,6 +15,10 @@ $sourceLangDeepl = $config['sourceLang']['deepl'];
 $sourceLang = $config['sourceLang']['traduora'];
 
 
+sendMessage("");
+sendMessage("Traduora-Deepl-Translator 1.0");
+sendMessage("");
+
 $managedLang = $config['langs'];
 
 define("url", $url);
@@ -111,6 +115,7 @@ function getLangs($project): array
 
 
 foreach ($projects as $project => $name) {
+  sendMessage("get project ".$name);
   try {
     sendMessage("get terms in ".sourceLang." in ".$name);
     $terms = getTerms($project, sourceLang);
