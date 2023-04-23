@@ -81,13 +81,14 @@ function deeplRequest($sourceLang, $outputLang, $message): string
   ]);
 
   $response = curl_exec($curl);
+  $info = curl_getinfo($curl);
   curl_close($curl);
   if ($response === false) {
-    throw new Exception("deepl request failed");
+    throw new Exception("deepl request failed, ".$info["http_code"]);
   }
   $array = json_decode($response, true);
   if (is_null($array) or $array === false) {
-    throw new Exception("deepl request failed");
+    throw new Exception("deepl request failed, ".$info["http_code"]);
   }
 
   return $array['translations'][0]['text'];
@@ -162,10 +163,10 @@ foreach ($projects as $project => $name) {
             $termsLang[$key] = removeMessagePlaceholder(deeplRequest(sourceLangDeepl, $deeplLang, addMessagePlaceholder($value)));
             traduoraRequest("projects/" . $project . "/translations/" . $lang, "PATCH", ["termId" => $key, "value" => $termsLang[$key]]);
           } catch (Exception $e) {
-            sendMessage("error in lang " . $lang . " for term " . $key . " with value " . $value);
+            sendMessage("error in lang " . $lang . " for term " . $key . " with value " . $value." error: ".$e->getMessage(). " (".$currentTerm."/".$countTerms.")");
           }
         } else {
-          if(!hasMessagePlaceholder($termsLang[$key]) and hasMessagePlaceholder($value)){
+          if(!hasMessagePlaceholder($termsLang[$key],$value)){
             sendMessage("patch translation (no placeholder found) " . $key . " in " . $lang . " in " . $name." (".$currentTerm."/".$countTerms.")");
 
             echo "old:".$termsLang[$key].PHP_EOL;
@@ -191,11 +192,23 @@ function sendMessage(string $message): void
   echo "[".date("d.m.Y H:i:s")."] ".$message.PHP_EOL;
 }
 
-function hasMessagePlaceholder(string $message): bool
+function hasMessagePlaceholder(string $message, string $original): bool
 {
-  $split = explode(" ", $message);
+  $allPlaceholders = [];
+  $split = explode(" ", $original);
   foreach ($split as $word){
     if (str_starts_with($word, "@")){
+      $allPlaceholders[] = $word;
+    }
+  }
+
+  if(count($allPlaceholders) === 0){
+    return true;
+  }
+
+  $split = explode(" ", $message);
+  foreach ($split as $word){
+    if (str_starts_with($word, "@") and in_array($word, $allPlaceholders)){
       return true;
     }
   }
