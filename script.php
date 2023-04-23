@@ -63,7 +63,16 @@ function deeplRequest($sourceLang, $outputLang, $message): string
 {
   $curl = curl_init();
   curl_setopt_array($curl, [
-    CURLOPT_URL => 'https://api-free.deepl.com/v2/translate?auth_key=' . deepl . '&text=' . urlencode($message) . '&target_lang=' . $outputLang . '&source_lang=' . $sourceLang,
+    CURLOPT_URL => 'https://api-free.deepl.com/v2/translate',
+    CURLOPT_POSTFIELDS => [
+      'auth_key' => deepl,
+      'text' => $message,
+      'target_lang' => $outputLang,
+      'source_lang' => $sourceLang,
+      'ignore_tags' => 'keep',
+      'preserve_formatting' => true,
+      'tag_handling' => 'xml'
+    ],
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_MAXREDIRS => 10,
     CURLOPT_TIMEOUT => 10,
@@ -147,16 +156,26 @@ foreach ($projects as $project => $name) {
       foreach ($terms as $key => $value) {
         $currentTerm++;
         if (empty($termsLang[$key]) and !empty($value)) {
-//          usleep(250000);
+          usleep(250000);
           try {
             sendMessage("translate " . $key . " in " . $lang . " in " . $name." (".$currentTerm."/".$countTerms.")");
-            $termsLang[$key] = deeplRequest(sourceLangDeepl, $deeplLang, $value);
+            $termsLang[$key] = removeMessagePlaceholder(deeplRequest(sourceLangDeepl, $deeplLang, addMessagePlaceholder($value)));
             traduoraRequest("projects/" . $project . "/translations/" . $lang, "PATCH", ["termId" => $key, "value" => $termsLang[$key]]);
           } catch (Exception $e) {
             sendMessage("error in lang " . $lang . " for term " . $key . " with value " . $value);
           }
         } else {
-          sendMessage("skip " . $key . " in " . $lang . " in " . $name." (".$currentTerm."/".$countTerms.")");
+          if(!hasMessagePlaceholder($termsLang[$key]) and hasMessagePlaceholder($value)){
+            sendMessage("patch translation (no placeholder found) " . $key . " in " . $lang . " in " . $name." (".$currentTerm."/".$countTerms.")");
+
+            echo "old:".$termsLang[$key].PHP_EOL;
+            $termsLang[$key] = removeMessagePlaceholder(deeplRequest(sourceLangDeepl, $deeplLang, addMessagePlaceholder($value)));
+            echo "new:".$termsLang[$key].PHP_EOL;
+
+            traduoraRequest("projects/" . $project . "/translations/" . $lang, "PATCH", ["termId" => $key, "value" => $termsLang[$key]]);
+          } else {
+            sendMessage("skip " . $key . " in " . $lang . " in " . $name . " (" . $currentTerm . "/" . $countTerms . ")");
+          }
         }
       }
     } catch (Exception $e) {
@@ -170,4 +189,52 @@ foreach ($projects as $project => $name) {
 function sendMessage(string $message): void
 {
   echo "[".date("d.m.Y H:i:s")."] ".$message.PHP_EOL;
+}
+
+function hasMessagePlaceholder(string $message): bool
+{
+  $split = explode(" ", $message);
+  foreach ($split as $word){
+    if (str_starts_with($word, "@")){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function addMessagePlaceholder(string $message): string
+{
+  $split = explode(" ", $message);
+  $newMessage = "";
+  foreach ($split as $word){
+    if (str_starts_with($word, "@")){
+      $newMessage .= " <keep>".$word."</keep>";
+    } else {
+      $newMessage .= " ".$word;
+    }
+  }
+
+  return removeFirstEmptySpace($newMessage);
+}
+
+function removeFirstEmptySpace(string $message): string
+{
+  $new = $message;
+  if (str_starts_with($message, " ")){
+    $new = substr($message, 1);
+  }
+  if (str_starts_with($new, " ")){
+    return removeFirstEmptySpace($new);
+  }
+
+
+  return $new;
+}
+
+function removeMessagePlaceholder(string $message): string
+{
+  $message = str_replace("</keep>", "", str_replace("<keep>", "", $message));
+
+  return removeFirstEmptySpace($message);
 }
