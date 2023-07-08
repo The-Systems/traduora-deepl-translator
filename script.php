@@ -91,7 +91,7 @@ function deeplRequest($sourceLang, $outputLang, $message): string
     throw new Exception("deepl request failed, ".$info["http_code"]);
   }
 
-  return $array['translations'][0]['text'];
+  return $array['translations'][0]['text'] ?? throw new Exception("deepl request failed, ".$info["http_code"]);
 }
 
 /**
