@@ -206,14 +206,14 @@ function hasMessagePlaceholder(string $message, string $original): bool
     return true;
   }
 
-  $split = explode(" ", $message);
-  foreach ($split as $word){
-    if (str_starts_with($word, "@") and in_array($word, $allPlaceholders)){
-      return true;
+
+  foreach ($allPlaceholders as $allPlaceholder) {
+    if (!str_contains($message, $allPlaceholder)) {
+      return false;
     }
   }
 
-  return false;
+  return true;
 }
 
 function addMessagePlaceholder(string $message): string
